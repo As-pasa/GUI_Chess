@@ -1,11 +1,4 @@
-
 #include "Interfaces.h"
-
-
-
-
-
-
 int main() {
 	int GRIDSIZEX = 8;
 	int GRIDSIZEY = 8;
@@ -13,17 +6,12 @@ int main() {
 	DisplayManager mm(MainGrid);
 	InputManager inp;
  
-	 
-	 
-
-
 	sf::RenderWindow window(sf::VideoMode(400, 400), "SFMLworks!");
 	LogicManager manager;
 	manager.Init();
 	
 	while (window.isOpen()) {
 		sf::Event event;
-
 		while (window.pollEvent(event)) {
 			switch (event.type)
 			{
@@ -48,11 +36,9 @@ int main() {
 			default:
 				break;
 			}
-
 		}
 		window.clear();
 		manager.Test(window);
 		window.display();
-	
 	}
 }
