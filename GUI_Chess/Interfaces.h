@@ -223,7 +223,7 @@ class DisplayManager {
 private:
 	std::vector<sf::Texture> Textures;
 	std::vector<sf::Sprite> FigureSprites;
-	Grid* _grid;
+	 
 	float scaleFactor = 50.f;
  
 	
@@ -231,7 +231,7 @@ private:
 	std::vector<sf::RectangleShape> _fill;
 	std::vector<int> _Highlights;
 public:
-	DisplayManager(Grid* g):_grid(g) {
+	DisplayManager(Grid* g)  {
 		sf::Texture a;
 		a.loadFromFile("b_pawn_1x_ns.png");
 		Textures.push_back(a);
@@ -270,9 +270,9 @@ public:
 		
 		 
 
-		for (int i = 0; i < _grid->GetSizeY(); i++)
+		for (int i = 0; i < g->GetSizeY(); i++)
 		{
-			for (int j = 0; j < _grid->GetSizeX(); j++)
+			for (int j = 0; j < g->GetSizeX(); j++)
 			{
 				sf::RectangleShape xx;
 				xx.setPosition(j * scaleFactor, i * scaleFactor);
@@ -283,7 +283,7 @@ public:
 		}
 	}
 	void HighlightWays(IFigure* f,Grid* g) {
-		std::vector<int> poses = f->GetPotentialMovePositions(_grid);
+		std::vector<int> poses = f->GetPotentialMovePositions(g);
 		for (int i = 0; i < poses.size();i++) {
 			_Highlights.push_back(poses[i]);
 		}
@@ -291,7 +291,7 @@ public:
 	void ClearHightLights() {
 		_Highlights.clear();
 	};
-	void DrawAll(sf::RenderWindow& window) {
+	void DrawAll(sf::RenderWindow& window,Grid* _grid) {
 		 
 		
 		for (int i = 0; i < _fill.size(); i++)
@@ -317,10 +317,6 @@ public:
 class InputManager {
 	int CellID;
 	bool _UserClicked = false;
-	
-	 
-
-
 	int SelectedCellID = -1;
 	int LastPushedID=-1;
 	int LastReleasedID=-2;
@@ -432,20 +428,30 @@ public:
 };
 
 enum class TurnState{WaitingForFirstCoord,WaitingForSecondCoord,CheckingTurn,EndOfTurn,PawnTransformation};
-enum class GameState{WhiteTurn,BlackTurn,EndOfGame};
+enum class GameState{WhiteTurn,BlackTurn,EndOfGame,WhiteChoosingFigure,BlachCoosingFigure};
 class Player {
 private:
 	CHCOLOR Color;
 	int SelectedFirstCell = -1;
 	int SelectedSecondCell = -1;
+	Type SelecteddTransformType = Type::Pawn;
 	TurnState st = TurnState::WaitingForFirstCoord;
 	bool CheckKingSafety() {
 		return false;
 	}
+	bool CheckIfPawnNeedTransformation(Grid* gr) {
+		if (gr->GetCellFromInt(SelectedSecondCell)->GetState() != Color) { return false; }
+		if (gr->GetCellFromInt(SelectedSecondCell)->TakeFigureInfo()->GetType() != Type::Pawn) { return false; }
+		int row = (Color == CHCOLOR::White) ? 0 : gr->GetSizeY() - 1;
+		if (SelectedSecondCell / gr->GetSizeX() == row) {
+			return true;
+		}
+		return false;
 
+	}
 public:	
 	Player(CHCOLOR c) :Color(c) {};
-	void Update(InputManager& _input,Grid* _grid,DisplayManager& _display) {
+	void Update(InputManager& _input,Grid* _grid,DisplayManager& _display,Grid* SelectGrid) {
 		_input.UpdateSelected();
 	
 		TurnChecker* TheGuard;
@@ -514,9 +520,24 @@ public:
 				}
 				_grid->Put(_grid->GetCellFromInt(SelectedFirstCell)->RemoveFigure(), SelectedSecondCell);
 				_display.ClearHightLights();
-				st = TurnState::EndOfTurn;
-				_grid->EndTurn();
+
+
+				 
+
+				//реальный конец хода
+				if (CheckIfPawnNeedTransformation(_grid)) {
+					std::cout << "firstCheckReady\n";
+					st = TurnState::PawnTransformation;
+				}
+				else {
+					st = TurnState::EndOfTurn;
+					_grid->EndTurn();
+
+				}
+			
+				
 			}
+			//перевыбор хода
 			else {
 				_display.ClearHightLights();
 				SelectedFirstCell = -1;
@@ -531,6 +552,30 @@ public:
 			SelectedSecondCell = -1;
 			st = TurnState::WaitingForFirstCoord;
 			break;
+		
+		case TurnState::PawnTransformation:
+			if (_input.GetCell() != -1) {
+				if (_input.GetCell() < 4) {
+					SelecteddTransformType = SelectGrid->GetCellFromInt(_input.GetCell())->TakeFigureInfo()->GetType();
+				}
+			}
+			
+
+
+
+			if (SelecteddTransformType != Type::Pawn) {
+				
+				IFigure* newFigure = FigureFactory::ConstructFigure(Color, SelecteddTransformType);
+			
+				delete _grid->GetCellFromInt(SelectedSecondCell)->RemoveFigure();
+				_grid->Put(newFigure, SelectedSecondCell);
+				st = TurnState::EndOfTurn;
+				_grid->EndTurn();
+			}
+
+			break;
+		
+		
 		default:
 			break;
 		}
@@ -541,25 +586,37 @@ public:
 
 class LogicManager {
 private:
-	int GridSizeX=8;
-	int GridSizeY=8;
+ 
 	Grid* _grid;
+	Grid* _FigureSelectionGrid;
 	Player black;
 	Player white;
 	GameState state;
 	DisplayManager _display;
 public:
-	LogicManager():_grid(new Grid(8,8)),_display(_grid),black(CHCOLOR::Black),white(CHCOLOR::White) {};
+	LogicManager():_grid(new Grid(8,8)),_display(_grid),black(CHCOLOR::Black),white(CHCOLOR::White),_FigureSelectionGrid(new Grid(8,8)) {};
 	InputManager _input;
+	Grid* GetGrid() {
+		if (state == GameState::WhiteChoosingFigure || state == GameState::BlachCoosingFigure) {
+			return _FigureSelectionGrid;
+		}
+		else {
+			return _grid;
+		}
+
+	}
 	void Init() {
-		
-		GridSizeX = 8;
-		GridSizeY = 8;
+		_FigureSelectionGrid->Put(FigureFactory::ConstructFigure(CHCOLOR::White, Type::Rook),0);
+		_FigureSelectionGrid->Put(FigureFactory::ConstructFigure(CHCOLOR::White, Type::Knight), 1);
+		_FigureSelectionGrid->Put(FigureFactory::ConstructFigure(CHCOLOR::White, Type::Bishop), 2);
+		_FigureSelectionGrid->Put(FigureFactory::ConstructFigure(CHCOLOR::White, Type::Queen), 3);
+		 
 		_grid->Put(new King(CHCOLOR::White), (_grid->GetSizeY() - 1) * (_grid->GetSizeX()) + 4);
 		_grid->Put(new Rook(CHCOLOR::White), (_grid->GetSizeY() - 1) * (_grid->GetSizeX()));
 		_grid->Put(new Rook(CHCOLOR::White), (_grid->GetSizeY() - 1) * (_grid->GetSizeX()) + 7);
 		_grid->Put(new Bishop(CHCOLOR::Black), _grid->GetSizeX() - 3);
 		_grid->Put(new King(CHCOLOR::Black), 4);
+		_grid->Put(new Pawn(CHCOLOR::White),62 );
 		//_grid->Put(new Knight(CHCOLOR::Black), 20);
 		//_grid->Put(new Knight(CHCOLOR::Black), 1);
 		//_grid->Put(new Bishop(CHCOLOR::White), 40);
@@ -600,21 +657,45 @@ public:
 	}
 	
 	void Test(sf::RenderWindow& w) {
-		 
+		Grid* nowgr = _grid;
 		switch (state)
 		{
 		case GameState::WhiteTurn:
-			white.Update(_input, _grid, _display);
-			if (white.GetState() == TurnState::EndOfTurn) {
+			white.Update(_input, _grid, _display, _FigureSelectionGrid);
+			if (white.GetState() == TurnState::PawnTransformation) {
+				state = GameState::WhiteChoosingFigure;
+			}
+			else if (white.GetState() == TurnState::EndOfTurn) {
 				state = GameState::BlackTurn;
 			}
 			break;
 		case GameState::BlackTurn:
-			black.Update(_input, _grid, _display);
+			black.Update(_input, _grid, _display, _FigureSelectionGrid);
+			if (black.GetState() == TurnState::PawnTransformation) {
+				state = GameState::BlachCoosingFigure;
+			}
 			if (black.GetState() == TurnState::EndOfTurn) {
 				state = GameState::WhiteTurn;
 			}
 			break;
+
+		case GameState::BlachCoosingFigure:
+			nowgr = _FigureSelectionGrid;
+			black.Update(_input, _grid, _display, _FigureSelectionGrid);
+			if (black.GetState() == TurnState::EndOfTurn) {
+				state = GameState::WhiteTurn;
+			}
+			break;
+
+
+		case GameState::WhiteChoosingFigure:
+			nowgr = _FigureSelectionGrid;
+			white.Update(_input, _grid, _display, _FigureSelectionGrid);
+			if (white.GetState() == TurnState::EndOfTurn) {
+				state = GameState::BlackTurn;
+			}
+			break;
+
 		case GameState::EndOfGame:
 			break;
 		default:
@@ -622,9 +703,27 @@ public:
 		}
 
 
-		
-		
-		_display.DrawAll(w);
-		
-	}
+
+
+		_display.DrawAll(w, nowgr);
+
+	};
 };
+/*
+	Замена фигуры:
+		 ироку перейти в специальное состояние
+			до первой селектет фигуры
+			получить фигуру
+			заспавнить фигуру
+			завершить ход
+			игроку выйти из специального состояния
+		 
+		 всей игре перейти в специальное состояние
+			рендерить и передавать игроку другое поле
+	
+		п
+		игре выйти из специального состояния, вернуться в стандартный цикл
+
+
+		
+*/

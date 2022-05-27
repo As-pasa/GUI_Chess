@@ -1,10 +1,6 @@
 #include "Interfaces.h"
 int main() {
-	int GRIDSIZEX = 8;
-	int GRIDSIZEY = 8;
-	Grid*MainGrid =new Grid(GRIDSIZEY, GRIDSIZEX);
-	DisplayManager mm(MainGrid);
-	InputManager inp;
+	
  
 	sf::RenderWindow window(sf::VideoMode(400, 400), "SFMLworks!");
 	LogicManager manager;
@@ -29,7 +25,7 @@ int main() {
 				 
 				break;
 			case sf::Event::MouseMoved:
-				manager._input.UpdateInut(event.mouseMove.y, event.mouseMove.x, MainGrid);
+				manager._input.UpdateInut(event.mouseMove.y, event.mouseMove.x, manager.GetGrid());
 				 
 			 
 				break;
