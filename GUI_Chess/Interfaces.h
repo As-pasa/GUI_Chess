@@ -15,8 +15,9 @@ protected:
 	int Selfy = 0;
 	int Selfx = 0;
 public:
+	int CurrentTurnPlayed = 0;
 	virtual IFigure* Clone();
-	virtual void ChangePos(int y, int x,Grid* g) { Selfy = y; Selfx= x; }
+	virtual void ChangePos(int y, int x, Grid* g) { Selfy = y; Selfx = x; CurrentTurnPlayed++; }
 	std::pair<int, int> GetPos() { return { Selfy,Selfx }; }
 	CHCOLOR GetColor() { return _color; };
 	Type GetType() { return _type; }
@@ -28,7 +29,6 @@ public:
 		}
 		return false;
 	}
-	
 };
 
 class Rook :public IFigure {
@@ -51,13 +51,7 @@ public:
 	Queen(CHCOLOR col) { _color = col; _type = Type::Queen; }
 	std::vector<int> GetPotentialMovePositions(Grid* grid);
 };
-class King:public IFigure {
-public:
-	King(CHCOLOR col) {
-		_color = col; _type = Type::King;
-	}
-	std::vector<int> GetPotentialMovePositions(Grid* grid);
-};
+
 
 class DistanceHolder {
 private:
@@ -185,10 +179,6 @@ public:
 };
 
 class Pawn :public IFigure {
-private:
-	int CurrentTurnPlayed = 0;
-
-	
 public:
 	int TurnOfSprint = -1;
 
@@ -210,6 +200,23 @@ public:
 	}
 	std::vector<int>GetPotentialMovePositions(Grid* grid);
 
+};
+
+class King :public IFigure {
+public:
+	King(CHCOLOR col) {
+		_color = col; _type = Type::King;
+	}
+	int TurnOfRokirovka = -1;
+
+	IFigure* Clone() {
+		IFigure* ans = FigureFactory::ConstructFigure(_color, _type);
+		King* aa = static_cast<King*>(ans);
+		aa->TurnOfRokirovka = TurnOfRokirovka;
+		aa->CurrentTurnPlayed = CurrentTurnPlayed;
+		return ans;
+	}
+	std::vector<int> GetPotentialMovePositions(Grid* grid);
 };
 
 class DisplayManager {
@@ -424,7 +431,7 @@ public:
 	}
 };
 
-enum class TurnState{WaitingForFirstCoord,WaitingForSecondCoord,CheckingTurn,EndOfTurn};
+enum class TurnState{WaitingForFirstCoord,WaitingForSecondCoord,CheckingTurn,EndOfTurn,PawnTransformation};
 enum class GameState{WhiteTurn,BlackTurn,EndOfGame};
 class Player {
 private:
@@ -473,9 +480,7 @@ public:
 			}
 			break;
 		case TurnState::CheckingTurn:
-			if (Color == CHCOLOR::Black) {
-				std::cout << "Niggers\n";
-			}
+			
 			std::cout << "EndIsComing\n";
 			TheGuard=new TurnChecker(_grid, Color, SelectedFirstCell, SelectedSecondCell);
 			
@@ -493,6 +498,20 @@ public:
 						}
 					}
 				}
+				else if (_grid->GetCellFromInt(SelectedFirstCell)->TakeFigureInfo()->GetType() == Type::King) {
+					King* z =static_cast<King*>(_grid->GetCellFromInt(SelectedFirstCell)->TakeFigureInfo());
+					std::cout << SelectedSecondCell << "\n";
+					if (SelectedSecondCell- SelectedFirstCell == 2) {
+						z->TurnOfRokirovka = _grid->GetCurTurn();
+						IFigure* Rook = _grid->GetCellFromCoord(z->GetPos().first, _grid->GetSizeX() - 1)->RemoveFigure();
+						_grid->Put(Rook, SelectedFirstCell + 1);
+					}
+					else if (SelectedSecondCell-SelectedFirstCell == -2) {
+						z->TurnOfRokirovka = _grid->GetCurTurn();
+						IFigure* Rook = _grid->GetCellFromCoord(z->GetPos().first, 0)->RemoveFigure();
+						_grid->Put(Rook, SelectedFirstCell - 1);
+					}
+				}
 				_grid->Put(_grid->GetCellFromInt(SelectedFirstCell)->RemoveFigure(), SelectedSecondCell);
 				_display.ClearHightLights();
 				st = TurnState::EndOfTurn;
@@ -505,19 +524,6 @@ public:
 				st = TurnState::WaitingForFirstCoord;
 			}
 			
-			
-			//CheckingGrid->Put(CheckingGrid->GetCellFromInt(SelectedFirstCell)->RemoveFigure(), SelectedSecondCell);
-			//_grid->Flush();
-			//_grid->SetData(CheckingGrid->GetData());
-			//delete CheckingGrid;
-			/*
-				создать копию грида -> скопировать все фигуры -> метод принимающий указатель,
-				возвращающий указатель -> в каждой фигуре по методу. Если в каждой фигуре по методу, не проще ли сразу его вызвать?
-				применить на него изменения
-				проверить, все ли в порядке
-				удалить форк грид
-				применить все на основной грид
-			*/
 			delete TheGuard;
 			break;
 		case TurnState::EndOfTurn:
@@ -528,6 +534,7 @@ public:
 		default:
 			break;
 		}
+		
 	}
 	TurnState GetState() { return st; }
 };
@@ -548,12 +555,15 @@ public:
 		
 		GridSizeX = 8;
 		GridSizeY = 8;
-		
-
+		_grid->Put(new King(CHCOLOR::White), (_grid->GetSizeY() - 1) * (_grid->GetSizeX()) + 4);
+		_grid->Put(new Rook(CHCOLOR::White), (_grid->GetSizeY() - 1) * (_grid->GetSizeX()));
+		_grid->Put(new Rook(CHCOLOR::White), (_grid->GetSizeY() - 1) * (_grid->GetSizeX()) + 7);
+		_grid->Put(new Bishop(CHCOLOR::Black), _grid->GetSizeX() - 3);
+		_grid->Put(new King(CHCOLOR::Black), 4);
 		//_grid->Put(new Knight(CHCOLOR::Black), 20);
 		//_grid->Put(new Knight(CHCOLOR::Black), 1);
 		//_grid->Put(new Bishop(CHCOLOR::White), 40);
-		
+		/*
 		for (int i = _grid->GetSizeX(); i < _grid->GetSizeX() * 2; i++) {
 			_grid->Put(new Pawn(CHCOLOR::Black),i);
 		};
@@ -577,7 +587,7 @@ public:
 		for (int i = (_grid->GetSizeY() - 2) * (_grid->GetSizeX()); i < (_grid->GetSizeY() - 1) * (_grid->GetSizeX()); i++) {
 			_grid->Put(new Pawn(CHCOLOR::White), i);
 		}
-		
+		*/
 		/*_grid->Put(new Rook(CHCOLOR::White), _grid->GetSizeX() - 1);
 		_grid->Put(new Knight(CHCOLOR::White), 1);
 		_grid->Put(new Knight(CHCOLOR::White), _grid->GetSizeX() - 2);

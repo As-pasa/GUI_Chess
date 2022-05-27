@@ -169,17 +169,12 @@ std::vector<int> Pawn::GetPotentialMovePositions(Grid* grid)
 	if (IsInBounds(newY, Selfx, grid)) {
 		if (grid->GetCellFromCoord(newY, Selfx)->GetState() ==CHCOLOR::Nothing) {
 			ans.push_back(ConvertCoordToInt(newY, Selfx, grid));
-		
 			if (CurrentTurnPlayed == 1) {
 				int nn = (_color == CHCOLOR::Black) ? Selfy + 2 : Selfy - 2;
 				if (grid->GetCellFromCoord(nn, Selfx)->GetState() == CHCOLOR::Nothing) {
 					ans.push_back(ConvertCoordToInt(nn, Selfx, grid));
 				}
-		
-		
 		}
-		
-
 	}
 	if (PawnDiagonalCanMove(Selfy, Selfx, newY - Selfy, 1, _color, grid)) {
 		ans.push_back(ConvertCoordToInt(newY, Selfx + 1, grid));
@@ -193,109 +188,7 @@ std::vector<int> Pawn::GetPotentialMovePositions(Grid* grid)
 	
 	return ans;
 }
-/*
-		проверить клетку перед собой, понятие перед мы определили+
-		ввести функцию проверки диагональных клеток, туда спихнуть грид и координату
-		ввести функцию для проверки, входят ли координаты в поле+
-		вызвать эту функцию для клетки справа
-		вызвать эту функцию для клетки слева
-		проверить, первый ли это ход пешкой
 
-		алгос:
-		клетка впереди: проверка на вхождение, проверка на то, что на ней фигура не нашего цвета
-		функция диагональных клеток:
-			она подходит если:
-				1) она в границах поля
-				И (
-				2) на ней стоит не наш цвет и не nothing
-				3) на соседней с нами клетке стоит пешка, у которой ход джампа был текущий ход - 1
-
-				параметры функции: текущая координата, смещение по x, смещение по y, цвет, грид
-
-
-	*/
-/*
-	if (_color == CHCOLOR::Black) {
-
-
-		if (Selfy + 1 < grid->GetSizeY()) {
-			ans.push_back((Selfy+1) * grid->GetSizeX() + Selfx);
-		}
-		if (Selfy + 1 < grid->GetSizeY() && Selfx + 1 < grid->GetSizeX()) {
-			if (grid->GetCellFromCoord(Selfy + 1, Selfx + 1)->GetState() == CHCOLOR::White) {
-				ans.push_back((Selfy + 1) * grid->GetSizeX() + Selfx + 1);
-			}
-			else {
-				if ( grid->GetCellFromCoord(Selfy, Selfx + 1)->GetState() == CHCOLOR::White) {
-					if (grid->GetCellFromCoord(Selfy, Selfx + 1)->TakeFigureInfo()->GetType() == Type::Pawn) {
-						if (static_cast<Pawn*>(grid->GetCellFromCoord(Selfy, Selfx + 1)->TakeFigureInfo())->TurnOfSprint == grid->GetCurTurn() - 1) {
-							ans.push_back((Selfy+1) * grid->GetSizeX() + Selfx + 1);
-						}
-					}
-				}
-			}
-
-		}
-		if (Selfy + 1 < grid->GetSizeY() && Selfx - 1 >0) {
-			if (grid->GetCellFromCoord(Selfy + 1, Selfx - 1)->GetState() == CHCOLOR::White) {
-				ans.push_back((Selfy + 1) * grid->GetSizeX() + Selfx - 1);
-			}
-			else {
-				if (Selfy + 1 == grid->GetSizeY() - 3 && grid->GetCellFromCoord(Selfy, Selfx - 1)->GetState() == CHCOLOR::White) {
-					if (grid->GetCellFromCoord(Selfy, Selfx - 1)->TakeFigureInfo()->GetType() == Type::Pawn) {
-						if (static_cast<Pawn*>(grid->GetCellFromCoord(Selfy, Selfx - 1)->TakeFigureInfo())->TurnOfSprint == grid->GetCurTurn() - 1) {
-							ans.push_back((Selfy + 1) * grid->GetSizeX() + Selfx - 1);
-						}
-					}
-				}
-			}
-
-		}
-		if (CurrentTurnPlayed == 1) {
-			ans.push_back((Selfy + 2) * grid->GetSizeX() + Selfx);
-		}
-	}
-	else {
-
-		if (Selfy - 1 >0) {
-			ans.push_back((Selfy - 1) * grid->GetSizeX() + Selfx);
-		}
-		if (Selfy - 1 > 0 && Selfx + 1 < grid->GetSizeX()) {
-			if (grid->GetCellFromCoord(Selfy - 1, Selfx + 1)->GetState() == CHCOLOR::Black) {
-				ans.push_back((Selfy - 1) * grid->GetSizeX() + Selfx + 1);
-			}
-			else {
-				if ( grid->GetCellFromCoord(Selfy, Selfx + 1)->GetState() == CHCOLOR::Black) {
-					if (grid->GetCellFromCoord(Selfy, Selfx + 1)->TakeFigureInfo()->GetType() == Type::Pawn) {
-						if (static_cast<Pawn*>(grid->GetCellFromCoord(Selfy, Selfx + 1)->TakeFigureInfo())->TurnOfSprint == grid->GetCurTurn() - 1) {
-							ans.push_back((Selfy - 1) * grid->GetSizeX() + Selfx + 1);
-						}
-					}
-				}
-			}
-
-		}
-		if (Selfy - 1 > 0 && Selfx - 1 > 0) {
-			if (grid->GetCellFromCoord(Selfy - 1, Selfx - 1)->GetState() == CHCOLOR::Black) {
-				ans.push_back((Selfy + 1) * grid->GetSizeX() + Selfx - 1);
-			}
-			else {
-				if(grid->GetCellFromCoord(Selfy, Selfx - 1)->GetState() == CHCOLOR::Black) {
-					if (grid->GetCellFromCoord(Selfy, Selfx - 1)->TakeFigureInfo()->GetType() == Type::Pawn) {
-						if (static_cast<Pawn*>(grid->GetCellFromCoord(Selfy, Selfx - 1)->TakeFigureInfo())->TurnOfSprint == grid->GetCurTurn() - 1) {
-							ans.push_back((Selfy - 1) * grid->GetSizeX() + Selfx - 1);
-						}
-					}
-				}
-			}
-
-		}
-		if (CurrentTurnPlayed == 1) {
-			ans.push_back((Selfy - 2) * grid->GetSizeX() + Selfx);
-		}
-	}
-	return ans;
-	*/
 IFigure* FigureFactory::ConstructFigure(CHCOLOR col, Type tp)
 {
 	{
@@ -327,6 +220,7 @@ IFigure* FigureFactory::ConstructFigure(CHCOLOR col, Type tp)
 
 std::vector<int> King::GetPotentialMovePositions(Grid* grid)
 {
+	std::vector<int> aaa = grid->GetDistancesFromID(ConvertCoordToInt(Selfy, Selfx, grid));
 	std::vector<int> ans;
 	for (int i = -1; i < 2; i++) {
 		for (int j = -1; j < 2; j++) {
@@ -338,10 +232,56 @@ std::vector<int> King::GetPotentialMovePositions(Grid* grid)
 			}
 		}
 	}
+	if (CurrentTurnPlayed == 1) {
+		int coordy = Selfy;
+		int coordx = 0;
+		for (int i = 1; i < aaa[1]-1; i++) {
+			
+			coordx = Selfx + i;
+			if (grid->GetCellFromCoord(coordy, coordx)->GetState() != CHCOLOR::Nothing) {
+				break;
+			}
+		}
+
+		coordx = Selfx+aaa[1];
+		if (grid->GetCellFromCoord(coordy, coordx)->GetState()==_color) {
+			if(grid->GetCellFromCoord(coordy,coordx )->TakeFigureInfo()->GetType()==Type::Rook && grid->GetCellFromCoord(coordy, coordx)->TakeFigureInfo()->CurrentTurnPlayed==1){
+				ans.push_back(ConvertCoordToInt(Selfy, Selfx + 2, grid));
+			}
+
+		}
+	}
+	if (CurrentTurnPlayed == 1) {
+		int coordy = Selfy;
+		int coordx = 0;
+		for (int i = 1; i < aaa[3] - 1; i++) {
+
+			coordx = Selfx - i;
+			if (grid->GetCellFromCoord(coordy, coordx)->GetState() != CHCOLOR::Nothing) {
+				break;
+			}
+		}
+		if (grid->GetCellFromCoord(coordy, 0)->GetState() == _color) {
+			if (grid->GetCellFromCoord(coordy, 0)->TakeFigureInfo()->GetType() == Type::Rook && grid->GetCellFromCoord(coordy, 0)->TakeFigureInfo()->CurrentTurnPlayed == 1) {
+				ans.push_back(ConvertCoordToInt(Selfy, Selfx - 2, grid));
+			
+			}
+
+		}
+		
+	}
+	
+
+
 	return ans;
 }
 
 IFigure* IFigure::Clone()
 {
-	return FigureFactory::ConstructFigure(_color, _type);
+	IFigure* xx= FigureFactory::ConstructFigure(_color, _type);
+	xx->CurrentTurnPlayed = CurrentTurnPlayed;
+	return xx;
 }
+/*
+	рокировка
+*/
